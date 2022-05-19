@@ -1,0 +1,55 @@
+package csvstatistics;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.util.*;
+
+public class WordAnalyzer implements Analyzer{
+    public WordAnalyzer(Reader reader){
+        this.reader = reader;
+    }
+
+    @Override
+    public List<CSVRecord> collectStatistics() throws IOException {
+        Map<String, CSVWordStatisticsRecord> statistics = new TreeMap<>();
+        parseText(statistics);
+        return countRatioAndConvertToList(statistics);
+    }
+
+    private void parseText(Map<String, CSVWordStatisticsRecord> statistics) throws IOException{
+        StringBuilder word = new StringBuilder();
+        char[] buffer = new char[1000];
+        int numCharRead = 0;
+        while ((numCharRead = reader.read(buffer)) != -1){
+            for(int i = 0; i < numCharRead; i++){
+                if(Character.isLetterOrDigit(buffer[i])){
+                    word.append(buffer[i]);
+                }
+                else if(!word.isEmpty()){
+                    if(statistics.containsKey(word)){
+                        CSVWordStatisticsRecord record = statistics.get(word);
+                        record.addInclude();
+                    }
+                    else {
+                        statistics.put(word.toString(), new CSVWordStatisticsRecord(word.toString()));
+                    }
+                }
+            }
+        }
+    }
+
+    private List<CSVRecord> countRatioAndConvertToList(Map<String, CSVWordStatisticsRecord> statistics){
+        List<CSVRecord> records = new ArrayList<>();
+        int numAllWords = 0;
+        for(CSVWordStatisticsRecord record : statistics.values()){
+            numAllWords += record.getNumInclusions();
+        }
+        for(CSVWordStatisticsRecord record : statistics.values()){
+            record.countRatio(numAllWords);
+            records.add(record);
+        }
+        return records;
+    }
+
+    private Reader reader = null;
+}
